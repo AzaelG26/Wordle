@@ -25,15 +25,34 @@ class JuegoViewController: UIViewController {
     var vidas = 3
     var puntajeTotal = 0
     var reproductorSonido: AVAudioPlayer?
+    var letrasIncorrectas: Set<String> = []
+    var musicaDeFondoPlayer: AVAudioPlayer?
+
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        configurarAudioSession()
+
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(appWillResignActive),
+            name: UIApplication.willResignActiveNotification,
+            object: nil)
+
+        NotificationCenter.default.addObserver(self,
+            selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil)
+
         palabraSecreta = palabrasPosibles.randomElement() ?? "ERROR"
         print("Palabra secreta: \(palabraSecreta)")
         actualizarNumeroIntentoLabel()
         actualizarVidasYRonda()
         iniciarTimer()
+        reproducirMusicaDeFondo()
     }
+
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
@@ -112,6 +131,12 @@ class JuegoViewController: UIViewController {
                 tecla.layer.cornerRadius = 5
                 tecla.addTarget(self, action: #selector(teclaPresionada(_:)), for: .touchUpInside)
                 view.addSubview(tecla)
+                if letrasIncorrectas.contains(letra) {
+                    tecla.isEnabled = false
+                    tecla.backgroundColor = .gray
+                    tecla.tintColor = .lightGray
+                }
+
                 xPos += anchoTecla + espacio
             }
             filaActual += 1
@@ -236,11 +261,29 @@ class JuegoViewController: UIViewController {
 
             DispatchQueue.main.async {
                 cuadro.backgroundColor = resultado[i]
+                if resultado[i] == .darkGray {
+                    if let letra = cuadro.text {
+                        self.letrasIncorrectas.insert(letra)
+                        self.desactivarTecla(letra)
+                    }
+                }
                 cuadro.textColor = .white
                 cuadro.layer.borderColor = UIColor.clear.cgColor
             }
         }
     }
+    
+    func desactivarTecla(_ letra: String) {
+        for subvista in view.subviews {
+            if let boton = subvista as? UIButton,
+               boton.title(for: .normal) == letra {
+                boton.isEnabled = false
+                boton.backgroundColor = .gray
+                boton.tintColor = .lightGray
+            }
+        }
+    }
+
 
     func mostrarAlerta(titulo: String, mensaje: String, alAceptar: (() -> Void)? = nil) {
         let alerta = UIAlertController(title: titulo, message: mensaje, preferredStyle: .alert)
@@ -279,6 +322,8 @@ class JuegoViewController: UIViewController {
         generarCuadricula()
         actualizarNumeroIntentoLabel()
         actualizarVidasYRonda()
+        letrasIncorrectas.removeAll()
+
     }
     
     func limpiarCuadricula() {
@@ -330,4 +375,39 @@ class JuegoViewController: UIViewController {
             print("Error al reproducir sonido: \(error.localizedDescription)")
         }
     }
+    
+    func reproducirMusicaDeFondo() {
+        guard let url = Bundle.main.url(forResource: "drown_converted", withExtension: "mp3") else {
+            print("No se encontró la música de fondo")
+            return
+        }
+
+        do {
+            musicaDeFondoPlayer = try AVAudioPlayer(contentsOf: url)
+            musicaDeFondoPlayer?.numberOfLoops = -1 // Repetir infinitamente
+            musicaDeFondoPlayer?.volume = 0.3 // Volumen bajo
+            musicaDeFondoPlayer?.play()
+        } catch {
+            print("Error al reproducir música de fondo: \(error.localizedDescription)")
+        }
+    }
+    
+    func configurarAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Error al configurar la sesión de audio: \(error)")
+        }
+    }
+
+    @objc func appWillResignActive() {
+        musicaDeFondoPlayer?.pause()
+    }
+
+    @objc func appDidBecomeActive() {
+        musicaDeFondoPlayer?.play()
+    }
+
+
 }
