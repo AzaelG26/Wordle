@@ -9,8 +9,7 @@ class JuegoViewController: UIViewController {
     @IBOutlet weak var rondaLabel: UILabel!
     
     var palabrasPosibles = [
-        "PINZA", "JUEGO", "TECLA", "NIEVE",
-        "PALMA", "LIBRO", "CIELO", "LENTE", "SALTO", "CAZAR", "GRANO"
+        "PERRO", "GATOS", "SALTO", "LLAVE", "MANGO", "ROSAS", "LIMON", "NUBES", "LUCES", "BRISA", "HOJAS", "BOTAS", "AVION", "PASTO", "NARIZ", "TAZAS", "CAMPO", "DIANA", "RELOJ", "CIELO", "CANTO", "REINA", "MONTO", "GOLPE", "CREMA", "PANAL", "TELAR", "MOTOR", "SILLA", "CASAS"
     ]
     
     var palabraSecreta: String = ""
@@ -34,7 +33,18 @@ class JuegoViewController: UIViewController {
         super.viewDidLoad()
 
         configurarAudioSession()
+        reproducirMusicaDeFondo()
 
+        // Ahora que la música ya empezó (o no), podemos configurar el botón con el ícono correcto
+        let icono = UIImage(systemName: musicaDeFondoPlayer?.isPlaying == true ? "speaker.fill" : "speaker.slash.fill")
+        let botonSonido = UIBarButtonItem(image: icono, style: .plain, target: self, action: #selector(alternarSonido))
+        
+        // (verde #709D62)
+        botonSonido.tintColor = UIColor(red: 112/255, green: 157/255, blue: 98/255, alpha: 1.0)
+        navigationController?.navigationBar.tintColor = UIColor(red: 112/255, green: 157/255, blue: 98/255, alpha: 1.0)
+        navigationItem.rightBarButtonItem = botonSonido
+
+        
         NotificationCenter.default.addObserver(self,
             selector: #selector(appWillResignActive),
             name: UIApplication.willResignActiveNotification,
@@ -407,6 +417,22 @@ class JuegoViewController: UIViewController {
 
     @objc func appDidBecomeActive() {
         musicaDeFondoPlayer?.play()
+    }
+    
+    @objc func alternarSonido() {
+        guard let player = musicaDeFondoPlayer else { return }
+
+        if player.isPlaying {
+            player.pause()
+            print("Sonido silenciado")
+        } else {
+            player.play()
+            print("Sonido activado")
+        }
+
+        // Cambiar el ícono en la barra de navegación
+        let nuevoIcono = UIImage(systemName: player.isPlaying ? "speaker.fill" : "speaker.slash.fill")
+        navigationItem.rightBarButtonItem?.image = nuevoIcono
     }
 
 
